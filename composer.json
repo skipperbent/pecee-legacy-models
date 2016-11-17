@@ -1,0 +1,36 @@
+{
+  "name": "pecee/legacy-models",
+  "description": "Composer module for adding legacy model support for pecee framework version 3 and greater.",
+  "keywords": [
+    "legacy",
+    "models",
+    "pecee",
+    "framework",
+    "upgrade"
+  ],
+  "license": "MIT",
+  "homepage": "http://pecee.dk",
+  "support": {
+    "source": "https://github.com/skipperbent/pecee-legacy-models"
+  },
+  "authors": [
+    {
+      "name": "Simon Sessingø",
+      "email": "simon.sessingoe@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.4.0",
+    "pecee/framework": ">=3"
+  },
+  "require-dev": {
+  },
+  "autoload": {
+    "psr-4": {
+      "Pecee\\": "src/Pecee/"
+    }
+  },
+  "config": {
+    "preferred-install": "dist"
+  }
+}
