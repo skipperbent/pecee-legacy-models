@@ -218,7 +218,7 @@ class User extends ModelData {
     /**
      * Get current user
      * @param bool $setData
-     * @return static
+     * @return self
      */
     public static function current($setData = false) {
         if(!is_null(static::$instance)) {
@@ -258,16 +258,24 @@ class User extends ModelData {
     /**
      * Get user by user id.
      * @param int $id
-     * @return static
+     * @return self
      */
     public static function getById($id) {
         return static::fetchOne('SELECT u.* FROM {table} u WHERE u.`id` = %s', array($id));
     }
 
+    /**
+     * @param array $ids
+     * @return self
+     */
     public static function getByIds(array $ids) {
         return static::fetchAll('SELECT u.* FROM {table} u WHERE u.`id` IN ('.PdoHelper::joinArray($ids).')' );
     }
 
+    /**
+     * @param $username
+     * @return self
+     */
     public static function getByUsername($username) {
         return static::fetchOne('SELECT u.* FROM {table} u WHERE u.`username` = %s && u.`deleted` = 0', $username);
     }
@@ -281,6 +289,13 @@ class User extends ModelData {
         return static::authenticate($this->username, $this->password, false);
     }
 
+    /**
+     * @param string $username
+     * @param string $password
+     * @param bool $remember
+     * @return static
+     * @throws UserException
+     */
     public static function authenticate($username, $password, $remember = false) {
         static::onLoginStart();
         $user = static::fetchOne('SELECT u.* FROM {table} u WHERE u.`deleted` = 0 && u.`username` = %s', $username);
