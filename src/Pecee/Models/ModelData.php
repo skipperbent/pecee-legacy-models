@@ -5,6 +5,9 @@ use Pecee\Collection\CollectionItem;
 
 abstract class ModelData extends Model {
 
+    /**
+     * @var CollectionItem
+     */
 	public $data;
 
 	public function __construct() {
@@ -45,8 +48,7 @@ abstract class ModelData extends Model {
 	}
 
 	public function parseArrayRow($row) {
-		$row = array_merge($row, $this->data->getData());
-		return parent::parseArrayRow($row);
+		return parent::parseArrayRow(array_merge($row, $this->data->getData()));
 	}
 
 }

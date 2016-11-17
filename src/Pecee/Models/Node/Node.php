@@ -312,7 +312,7 @@ class ModelNode extends Model {
     /**
      * Get first or default value
      * @param string $default
-     * @return static
+     * @return self
      */
     public function getFirstOrDefault($default = null) {
         if($this->hasRows()) {
