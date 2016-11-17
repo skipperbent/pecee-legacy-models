@@ -131,6 +131,7 @@ abstract class Model implements \IteratorAggregate {
 
         $sql = sprintf('UPDATE `%s` SET %s WHERE `%s` = ? LIMIT 1;', $this->table, join(', ', $concat), $this->primary);
         Pdo::getInstance()->nonQuery($sql, $values);
+        return $this;
     }
 
     protected function getCountSql($sql) {

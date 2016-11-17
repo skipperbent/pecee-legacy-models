@@ -65,9 +65,8 @@ class User extends ModelData {
     }
 
     public function save() {
-        $user = static::getByUsername($this->username);
-        if($user->hasRow()) {
-            throw new UserException(sprintf('The username %s already exists', $this->data->username), static::ERROR_TYPE_EXISTS);
+        if($this->exists()) {
+            throw new UserException(sprintf('The username %s already exists', $this->username), static::ERROR_TYPE_EXISTS);
         }
         parent::save();
     }
@@ -76,6 +75,7 @@ class User extends ModelData {
 
         if($this->data !== null) {
 
+            /* @var $userDataClass UserData */
             $userDataClass = static::getUserDataClass();
             $currentFields = $userDataClass::getByUserId($this->id);
 
@@ -118,7 +118,9 @@ class User extends ModelData {
     }
 
     protected function fetchData() {
+        /* @var $class UserData */
         $class = static::getUserDataClass();
+        $class = new $class();
         $data = $class::getByUserId($this->id);
         if($data->hasRows()) {
             foreach($data->getRows() as $d) {
@@ -155,7 +157,11 @@ class User extends ModelData {
         }
     }
 
-    public function exist() {
+    public function exists() {
+        if($this->{$this->primary} === null) {
+            return false;
+        }
+
         return $this->scalar('SELECT u.`username` FROM {table} u WHERE u.`username` = %s && u.`deleted` = 0 LIMIT 1', $this->username);
     }
 
@@ -244,7 +250,7 @@ class User extends ModelData {
         }
         if($query !== null) {
             $userData = static::getUserDataClass();
-            $where[]='(`username` LIKE \'%%' . PdoHelper::escape($query).'%%\' OR (SELECT `' .  $userData::USER_IDENTIFIER_KEY . '` FROM `'.$userData.'` WHERE `'. $userData::USER_IDENTIFIER_KEY .'` = u.`id` && `value` LIKE \'%%'.PdoHelper::escape($query).'%%\' LIMIT 1))';
+            $where[] = '(`username` LIKE \'%%' . PdoHelper::escape($query).'%%\' OR (SELECT `' .  $userData::USER_IDENTIFIER_KEY . '` FROM `'.$userData.'` WHERE `'. $userData::USER_IDENTIFIER_KEY .'` = u.`id` && `value` LIKE \'%%'.PdoHelper::escape($query).'%%\' LIMIT 1))';
         }
         return static::fetchPage('SELECT u.* FROM {table} u WHERE ' . join(' && ', $where) . ' ORDER BY '.$order, $rows, $page);
     }
@@ -292,18 +298,18 @@ class User extends ModelData {
     }
 
     /**
-     * @return UserData
+     * @return string
      */
     public static function getUserDataClass() {
         return UserData::class;
     }
 
     // Events
-    protected static function onLoginFailed(ModelUser $user){
+    protected static function onLoginFailed(self $user){
         UserBadLogin::track($user->username);
     }
 
-    protected static function onLoginSuccess(ModelUser $user) {
+    protected static function onLoginSuccess(self $user) {
         UserBadLogin::reset();
     }
 
