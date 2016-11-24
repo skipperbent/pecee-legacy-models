@@ -21,7 +21,7 @@
   ],
   "require": {
     "php": ">=5.4.0",
-    "pecee/framework": ">=3"
+    "pecee/framework": ">=3.6"
   },
   "require-dev": {
   },

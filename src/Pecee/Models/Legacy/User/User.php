@@ -4,7 +4,7 @@ namespace Pecee\Models\Legacy\User;
 use Carbon\Carbon;
 use Pecee\Cookie;
 use Pecee\DB\PdoHelper;
-use Pecee\Mcrypt;
+use Pecee\Guid;
 use Pecee\Models\Legacy\ModelData;
 
 class User extends ModelData {
@@ -173,7 +173,7 @@ class User extends ModelData {
 
     protected function signIn($cookieExp){
         $user = array($this->id, $this->password, md5(microtime()), $this->username, $this->admin_level, static::getSalt());
-        $ticket = Mcrypt::encrypt(join('|',$user), static::getSalt());
+        $ticket = Guid::encrypt(join('|',$user), static::getSalt());
         Cookie::create(static::COOKIE_NAME, $ticket, $cookieExp);
     }
 
@@ -182,7 +182,7 @@ class User extends ModelData {
      * @param int $minutes
      */
     public function setTimeout($minutes) {
-        $this->signIn(time()+60*$minutes);
+        $this->signIn(time() + 60 * $minutes);
     }
 
     /**
@@ -196,7 +196,7 @@ class User extends ModelData {
     public static function getFromCookie($setData = false) {
         $ticket = Cookie::get(static::COOKIE_NAME);
         if(trim($ticket) !== ''){
-            $ticket = Mcrypt::decrypt($ticket, static::getSalt());
+            $ticket = Guid::decrypt($ticket, static::getSalt());
             $user = explode('|', $ticket);
             if (is_array($user) && trim(end($user)) === static::getSalt()) {
                 if ($setData) {
