@@ -23,6 +23,8 @@ class User extends ModelData {
 
     protected static $instance;
 
+    protected static $ticketExpireMinutes = 60 * 1;
+
     protected $timestamps = true;
 
     protected $table = 'user';
@@ -48,9 +50,13 @@ class User extends ModelData {
         parent::__construct();
 
         $this->username = $username;
-        $this->password = md5($password);
+
+        if ($password !== null) {
+            $this->password = $this->setPassword($password);
+        }
+
         $this->admin_level = 0;
-        $this->last_activity = Carbon::now()->toDateTimeString();
+        $this->last_activity = Carbon::now();
         $this->deleted = false;
 
         $this->setEmail($email);
@@ -139,18 +145,6 @@ class User extends ModelData {
         return parent::update();
     }
 
-
-    public static function isLoggedIn($force = false) {
-        if($force === true) {
-            $user = static::getFromCookie(true);
-            if($user !== null && $user->hasRow()) {
-                return true;
-            }
-            return false;
-        }
-        return (Cookie::exists(static::COOKIE_NAME) && static::getFromCookie() !== null);
-    }
-
     public function signOut() {
         if(Cookie::exists(static::COOKIE_NAME)) {
             Cookie::delete(static::COOKIE_NAME);
@@ -171,66 +165,96 @@ class User extends ModelData {
         }
     }
 
-    protected function signIn($cookieExp){
-        $user = array($this->id, $this->password, md5(microtime()), $this->username, $this->admin_level, static::getSalt());
-        $ticket = Guid::encrypt(join('|',$user), static::getSalt());
-        Cookie::create(static::COOKIE_NAME, $ticket, $cookieExp);
+    protected function signIn(){
+        static::createTicket($this->id);
     }
 
-    /**
-     * Set timeout on user session
-     * @param int $minutes
-     */
-    public function setTimeout($minutes) {
-        $this->signIn(time() + 60 * $minutes);
-    }
+    public static function isLoggedIn() {
 
-    /**
-     * Sets users password and encrypts it.
-     * @param string $string
-     */
-    public function setPassword($string) {
-        $this->password = md5($string);
-    }
+        $ticket = static::getTicket();
 
-    public static function getFromCookie($setData = false) {
-        $ticket = Cookie::get(static::COOKIE_NAME);
-        if(trim($ticket) !== ''){
-            $ticket = Guid::decrypt($ticket, static::getSalt());
-            $user = explode('|', $ticket);
-            if (is_array($user) && trim(end($user)) === static::getSalt()) {
-                if ($setData) {
-                    static::$instance = static::getById($user[0]);
-                    return static::$instance;
-                } else {
-                    $obj = new static();
-                    $obj->setRow('id', $user[0]);
-                    $obj->setRow('password', $user[1]);
-                    $obj->setRow('username', $user[3]);
-                    $obj->setRow('admin_level', $user[4]);
-                    return $obj;
-                }
+        try {
+
+            if ($ticket === null || Carbon::parse($ticket[1])->diffInMinutes(Carbon::now()) > static::$ticketExpireMinutes) {
+                Cookie::delete(static::COOKIE_NAME);
+
+                return false;
             }
+
+            return true;
+
+        } catch (\Exception $e) {
+            Cookie::delete(static::COOKIE_NAME);
+
+            return false;
         }
+
+    }
+
+    public static function createTicket($userId)
+    {
+        /* Remove existing ticket */
+        Cookie::delete(static::COOKIE_NAME);
+
+        $ticket = Guid::encrypt(static::getSalt(), join('|', [
+            $userId,
+            Carbon::now()->addMinutes(static::$ticketExpireMinutes)->toW3cString(),
+        ]));
+
+        Cookie::create(static::COOKIE_NAME, $ticket);
+    }
+
+    public static function getTicket()
+    {
+        if (Cookie::exists(static::COOKIE_NAME) === false) {
+            return null;
+        }
+
+        $ticket = Guid::decrypt(static::getSalt(), Cookie::get(static::COOKIE_NAME));
+
+        if ($ticket !== false) {
+            $ticket = explode('|', $ticket);
+
+            return (count($ticket) > 0) ? $ticket : null;
+        }
+
         return null;
     }
 
     /**
+     * Sets users password and encrypts it.
+     * @param string $password
+     */
+    public function setPassword($password) {
+        $this->password = password_hash($password, PASSWORD_DEFAULT);
+    }
+
+    /**
      * Get current user
-     * @param bool $setData
      * @return self
      */
-    public static function current($setData = false) {
-        if(!is_null(static::$instance)) {
+    public static function current() {
+
+        if (static::$instance !== null) {
             return static::$instance;
         }
-        if(static::isLoggedIn()){
-            $user = static::getFromCookie($setData);
-            if($user !== null) {
-                return $user;
+
+        if (static::isLoggedIn() === true) {
+
+            $ticket = static::getTicket();
+
+            /* @var $user static */
+            static::$instance = static::getById($ticket[0]);
+
+            if (static::$instance !== null) {
+                /* Refresh ticket */
+                static::createTicket($ticket[0]);
             }
+
         }
+
         return static::$instance;
+
     }
 
     public static function getSalt() {
@@ -261,7 +285,7 @@ class User extends ModelData {
      * @return self
      */
     public static function getById($id) {
-        return static::fetchOne('SELECT u.* FROM {table} u WHERE u.`id` = %s', array($id));
+        return static::fetchOne('SELECT u.* FROM {table} u WHERE u.`id` = %s && u.`deleted` = 0', array($id));
     }
 
     /**
@@ -296,19 +320,19 @@ class User extends ModelData {
      * @return static
      * @throws UserException
      */
-    public static function authenticate($username, $password, $remember = false) {
+    public static function authenticate($username, $password) {
         static::onLoginStart();
         $user = static::fetchOne('SELECT u.* FROM {table} u WHERE u.`deleted` = 0 && u.`username` = %s', $username);
         if(!$user->hasRows()) {
             throw new UserException('Invalid login', static::ERROR_TYPE_INVALID_LOGIN);
         }
         // Incorrect user login.
-        if(strtolower($user->username) != strtolower($username) || $user->password != md5($password) && $user->password != $password) {
+        if(strtolower($user->username) != strtolower($username) || password_verify($password, $user->password) === false) {
             static::onLoginFailed($user);
             throw new UserException('Invalid login', static::ERROR_TYPE_INVALID_LOGIN);
         }
         static::onLoginSuccess($user);
-        $user->signIn(($remember) ? null : 0);
+        $user->signIn();
         return $user;
     }
 
