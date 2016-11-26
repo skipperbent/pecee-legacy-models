@@ -19,7 +19,7 @@ class UserReset extends Model {
         parent::__construct();
 
         $this->user_id = $userId;
-        $this->key = md5(uniqid());
+        $this->key = md5(uniqid('', true));
     }
 
     public function clean() {

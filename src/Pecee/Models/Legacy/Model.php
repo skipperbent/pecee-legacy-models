@@ -174,7 +174,7 @@ abstract class Model implements \IteratorAggregate {
             $maxRows = Pdo::getInstance()->value($countSql);
             $results['data']['page'] = $page;
             $results['data']['rows_per_page'] = $rows;
-            $results['data']['max_rows'] = intval($maxRows);
+            $results['data']['max_rows'] = (int)$maxRows;
         }
 
         $model->setResults($results);
@@ -312,7 +312,7 @@ abstract class Model implements \IteratorAggregate {
         }
 
         $data = (!is_array($data) && !mb_detect_encoding($data, 'UTF-8', true)) ? utf8_encode($data) : $data;
-        return (Integer::isInteger($data)) ? intval($data) : $data;
+        return (Integer::isInteger($data)) ? (int)($data) : $data;
     }
 
     public function parseArrayRow($row) {
@@ -478,6 +478,11 @@ abstract class Model implements \IteratorAggregate {
 
     public function __set($name, $value) {
         $this->results['data']['rows'][strtolower($name)] = $value;
+    }
+
+    public function __isset($name)
+    {
+        return ($this->{$name} !== null) ? $this->{$name} : null;
     }
 
     /**
