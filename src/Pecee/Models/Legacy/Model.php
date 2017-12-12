@@ -421,7 +421,7 @@ abstract class Model implements \IteratorAggregate {
      * @return array|null
      */
     public function getRows() {
-        return ($this->hasRows()) ? $this->results['data']['rows'] : null;
+        return $this->hasRows() ? $this->results['data']['rows'] : [];
     }
 
     public function getMaxRows() {
