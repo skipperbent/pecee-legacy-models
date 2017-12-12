@@ -8,7 +8,7 @@ use Pecee\DB\PdoHelper;
 use Pecee\Models\Legacy\Model;
 use Pecee\Str;
 
-class ModelNode extends Model {
+class Node extends Model {
 
     const ORDER_ID_DESC = 'n.`id` DESC';
     const ORDER_CHANGED_DESC = 'IFNULL(n.`changed_date`, IFNULL(n.`active_from`, n.`created_date`)) DESC';

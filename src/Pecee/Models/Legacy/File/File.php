@@ -5,7 +5,7 @@ use Carbon\Carbon;
 use Pecee\Guid;
 use Pecee\Models\Legacy\ModelData;
 
-class ModelFile extends ModelData {
+class File extends ModelData {
 
 	const ORDER_DATE_ASC = 'f.`created_at` ASC';
 	const ORDER_DATE_DESC = 'f.`created_at` DESC';
