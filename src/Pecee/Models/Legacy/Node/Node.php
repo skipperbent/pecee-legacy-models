@@ -328,7 +328,8 @@ class Node extends Model {
      */
     public function skip($number) {
         if($this->hasRows() && $number > 0) {
-            $out = array_splice($this->getRows(), $number);
+            $out = $this->getRows();
+            $out = array_splice($out, $number);
             $this->setRows($out);
         }
         return $this;
